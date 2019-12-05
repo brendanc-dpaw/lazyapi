@@ -1,6 +1,6 @@
 from meraki import meraki
 from azure.storage.blob import BlobServiceClient
-import json
+import json, datetime
 
 def handle(req):
     """handle a request to the function
