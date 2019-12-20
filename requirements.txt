@@ -1,2 +1,4 @@
+fastapi
+dotenv
 meraki
 azure-storage-blob
