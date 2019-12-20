@@ -1,4 +1,6 @@
+#!/usr/bin/env python
 from lazyapi import app
+import os
 from meraki import meraki
 from azure.storage.blob import BlobServiceClient
 import json, datetime
@@ -8,8 +10,6 @@ def merakiclients():
     APIKEY = os.getenv("MERAKI-API-KEY")
     devices = list()
     clients = list()
-    for key in ["meraki-api-key", "blob-connection-string", "meraki-blob-container"]:
-        secrets[key] = open("/var/openfaas/secrets/" + key).read().strip()
 
     mOrgs = meraki.myorgaccess(APIKEY)
 

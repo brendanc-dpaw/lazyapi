@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from fastapi import FastAPI
 from dotenv import load_dotenv
 

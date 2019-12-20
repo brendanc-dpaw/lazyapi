@@ -1,12 +1,3 @@
-from importlib import import_module
-from pathlib import Path
-
-# Expose all files in this dir
-
-__all__ = [
-    import_module(f".{f.stem}", __package__)
-    for f in Path(__file__).parent.glob("*.py")
-    if "__" not in f.stem
-]
-del import_module, Path
-
+#!/usr/bin/env python
+import os, pkgutil
+__all__ = list(module for _, module, _ in pkgutil.iter_modules([os.path.dirname(__file__)]))

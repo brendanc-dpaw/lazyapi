@@ -1,4 +1,4 @@
 fastapi
-dotenv
+python-dotenv
 meraki
 azure-storage-blob
