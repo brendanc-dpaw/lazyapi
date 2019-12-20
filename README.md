@@ -5,10 +5,10 @@
 Simple project based on FastAPI that imports a directory of functions (single python files) and exposes them on port 80
 
 Structure:
-- main.py - uvicorn entrypoint that imports functions dir and exposes app
-- lazyapi.py - creates fastapi app and loads dotenv (for local dev)
-- functions/__init__.py - indexes all functions for import *
-- functions/mycoolfunc.py - any set of functions/routes
+- `main.py` - uvicorn entrypoint that imports functions dir and exposes app
+- `lazyapi.py` - creates fastapi app and loads dotenv (for local dev)
+- `functions/__init__.py` - indexes all functions for import *
+- `functions/mycoolfunc.py` - any set of functions/routes
 
 Within a function can just import app and register urls as per [FastAPI Docs](https://fastapi.tiangolo.com/)
 
