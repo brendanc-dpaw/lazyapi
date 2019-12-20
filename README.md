@@ -26,7 +26,7 @@ Then you can build it and fire your webhooks!
 
 ``` bash
 vim .env # fill with secrets
-docker build . -t lazyapi # note this image will have your .env in it, don't push it
-docker run -d --name lazyapi -p 8000:80 lazyapi
+docker build . -t lazyapi
+docker run -d --env .env --name lazyapi -p 8000:80 lazyapi
 curl localhost:8000/some/neat/url
 ```
