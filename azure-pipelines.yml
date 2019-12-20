@@ -24,6 +24,7 @@ stages:
     - task: Docker@2
       inputs:
         containerRegistry: 'dockerhub'
+        repository: 'dbcawa/lazyapi'
         command: 'buildAndPush'
         Dockerfile: '**/Dockerfile'
         tags: |
