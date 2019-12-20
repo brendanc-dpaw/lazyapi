@@ -7,7 +7,7 @@ import json, datetime
 
 @app.get("/data-imports/meraki-clients")
 def merakiclients():
-    APIKEY = os.getenv("MERAKI-API-KEY")
+    APIKEY = os.getenv("MERAKI_API_KEY")
     devices = list()
     clients = list()
 
@@ -20,8 +20,8 @@ def merakiclients():
     for device in devices:
         clients += meraki.getclients(APIKEY, device["serial"])
 
-    blobclient = BlobServiceClient.from_connection_string(os.getenv("BLOB-CONNECTION-STRING"))
-    container = blobclient.get_container_client(os.getenv("MERAKI-BLOB-CONTAINER"))
+    blobclient = BlobServiceClient.from_connection_string(os.getenv("BLOB_CONNECTION_STRING"))
+    container = blobclient.get_container_client(os.getenv("MERAKI_BLOB_CONTAINER"))
     blobname = "clients-{}.json".format(datetime.date.today().isoformat())
     container.upload_blob(blobname, data=json.dumps(clients, indent=2))
 
