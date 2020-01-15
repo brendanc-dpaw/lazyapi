@@ -8,14 +8,28 @@ from collections import defaultdict
 def loadGIS():
     return GIS(username=os.getenv("AGOL_USERNAME"), password=os.getenv("AGOL_PASSWORD"), url=os.getenv("AGOL_URL"))
 
-@app.get("/esri/agol-unlicense")
-def agolunlicense():
-    gis = loadGIS()
+def content(gis):
     content = defaultdict(list)
     for item in gis.content.search('', max_items=10000):
         content[item.owner].append(item)
-    users = gis.users.search()
+    return content
+
+def users(gis):
+    users = gis.users.search(max_users=10000)
+    mycontent = content(gis)
+    userdata = {}
     for user in users:
-        if user.username not in content.keys():
-            print("may unlicense {}, lastlogin {}".format(user.username, user.lastLogin))
+        userdata[user.username] = {
+            "user": user,
+            "content": mycontent.get(user.username)
+        }
+    return userdata
+
+@app.get("/esri/agol-unlicense")
+def agolunlicense():
+    gis = loadGIS()
+    userdata = users(gis)
+    for username, item in userdata.items():
+        if not item['content']:
+            print("may unlicense {}, lastlogin {}".format(username, item["user"].lastLogin))
     return locals()
