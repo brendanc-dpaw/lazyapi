@@ -33,5 +33,7 @@ def agolunlicense():
     userdata = users(gis)
     for username, item in userdata.items():
         if not item['content'] and item["daysago"] > 90:
+            try: item["user"].delete()
+            except Exception as e: print("{}, {}".format(e, username))
             print("may unlicense {}, daysago {}".format(username, item["daysago"]))
     return locals()
