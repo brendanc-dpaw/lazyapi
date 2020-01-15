@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from lazyapi import app
 import os
-from meraki import meraki
+import meraki
 from azure.storage.blob import BlobServiceClient
 import json, datetime
 
