@@ -4,6 +4,7 @@ import os
 import json, datetime
 from arcgis.gis import GIS
 from collections import defaultdict
+from datetime import datetime
 
 def loadGIS():
     return GIS(username=os.getenv("AGOL_USERNAME"), password=os.getenv("AGOL_PASSWORD"), url=os.getenv("AGOL_URL"))
@@ -21,7 +22,8 @@ def users(gis):
     for user in users:
         userdata[user.username] = {
             "user": user,
-            "content": mycontent.get(user.username)
+            "content": mycontent.get(user.username),
+            "daysago": (datetime.now() - datetime.fromtimestamp(user.lastLogin/1000)).days
         }
     return userdata
 
@@ -30,6 +32,6 @@ def agolunlicense():
     gis = loadGIS()
     userdata = users(gis)
     for username, item in userdata.items():
-        if not item['content']:
-            print("may unlicense {}, lastlogin {}".format(username, item["user"].lastLogin))
+        if not item['content'] and item["daysago"] > 90:
+            print("may unlicense {}, daysago {}".format(username, item["daysago"]))
     return locals()
