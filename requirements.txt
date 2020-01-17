@@ -3,3 +3,5 @@ python-dotenv
 meraki
 azure-storage-blob
 arcgis
+peewee
+psycopg2-binary
