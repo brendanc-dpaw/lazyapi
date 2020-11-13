@@ -15,6 +15,9 @@ async def spgraph_rename(token: str = "", spsite: str = "", path: str = "",
 
     header, expires_in = get_msgraph_token()
 
+    spsite = check_path(spsite)
+    path = check_path(path)
+
     # Get the drive ID
     url = "{}/sites{}{}:/drive".format(spgraph_url, spgraph_spurl, spsite)
 
@@ -62,6 +65,9 @@ async def spgraph_delete(token: str = "", spsite: str = "", path: str = "", file
     
     header, expires_in = get_msgraph_token()
 
+    spsite = check_path(spsite)
+    path = check_path(path)
+
     # Get the drive ID
     url = "{}/sites{}{}:/drive".format(spgraph_url, spgraph_spurl, spsite)
 
@@ -84,7 +90,7 @@ async def spgraph_delete(token: str = "", spsite: str = "", path: str = "", file
     # Make file access url
     url = "{}/drives/{}/items/{}".format(spgraph_url, drive_id, file_id)
     
-    return requests.delete(url, headers=header)
+    return requests.delete(url, headers=header).json()
 
 
 def check_token_valid(token):
@@ -108,3 +114,16 @@ def get_msgraph_token():
     response = json.loads(r.text)
     
     return ({'Authorization': response['token_type'] + " " + response['access_token']}, response['expires_in']) 
+
+
+def check_path(path):
+    # Ensure there is a preceeding /
+    if path[0] != '/':
+        path = "/" + path
+    # Ensure there is no trailing /
+    if path[-1] == '/':
+        path = ''.join([path[i] for i in range(len(path)-1)])
+
+    print(path)
+
+    return path
