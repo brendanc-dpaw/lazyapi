@@ -1,4 +1,5 @@
 from lazyapi import app
+from fastapi import HTTPException
 import requests
 import os
 import json
@@ -10,7 +11,7 @@ spgraph_spurl = os.getenv("SPGRAPH_SPURL")
 async def spgraph_rename(token: str = "", spsite: str = "", path: str = "", 
                             filename: str = "", tofilename: str = ""):
     if not check_token_valid(token):
-        return "404"
+        raise HTTPException(status_code=403, detail="Invalid token provided")
 
     header, expires_in = get_msgraph_token()
 
@@ -20,10 +21,11 @@ async def spgraph_rename(token: str = "", spsite: str = "", path: str = "",
     drive_id = requests.get(url, headers=header).json()['id']
 
     # Get a listing of the drive at the passed in path
-    url = "{}/drives/{}/root:{}/children".format(spgraph_url, drive_id, path)
+    url = "{}/drives/{}/root:{}:/children".format(spgraph_url, drive_id, path)
 
     dirlist = requests.get(url, headers=header).json()
 
+    # Iterate over the files and find the one we want
     file_id = ""
     for f in dirlist['value']:
         if f['name'] == filename:
@@ -35,30 +37,54 @@ async def spgraph_rename(token: str = "", spsite: str = "", path: str = "",
     # Make file access url
     url = "{}/drives/{}/items/{}".format(spgraph_url, drive_id, file_id)
 
-    return requests.get(url, headers=header).json()
+    rename = json.dumps({'name': tofilename})
+    
+    # Application/json content type required to update driveitem properties.
+    header['content-type'] = 'application/json'
+
+    return requests.patch(url, data=rename, headers=header).json()
 
 @app.get("/spgraph/get/")
 async def spgraph_get(token: str = "", path: str = ""):
     if not check_token_valid(token):
-        return "404"
+        raise HTTPException(status_code=403, detail="Invalid token provided")
 
     header, expires_in = get_msgraph_token()
 
     url = spgraph_url + path
 
-    return json.loads(requests.get(url, headers=header).text)
+    return requests.get(url, headers=header).json()
 
 @app.get("/spgraph/delete")
-async def spgraph_delete():
-    if not check_token_valid():
-        return "404"
+async def spgraph_delete(token: str = "", spsite: str = "", path: str = "", filename: str = ""):
+    if not check_token_valid(token):
+        raise HTTPException(status_code=403, detail="Invalid token provided")
     
+    header, expires_in = get_msgraph_token()
 
+    # Get the drive ID
+    url = "{}/sites{}{}:/drive".format(spgraph_url, spgraph_spurl, spsite)
+
+    drive_id = requests.get(url, headers=header).json()['id']
+
+    # Get a listing of the drive at the passed in path
+    url = "{}/drives/{}/root:{}:/children".format(spgraph_url, drive_id, path)
+
+    dirlist = requests.get(url, headers=header).json()
+
+    # Iterate over the files and find the one we want
+    file_id = ""
+    for f in dirlist['value']:
+        if f['name'] == filename:
+            file_id = f['id']
+
+    if file_id == "":
+        raise HTTPEXCEPTION(status_code=404, detail="File: {} not found".format(filename))
+
+    # Make file access url
+    url = "{}/drives/{}/items/{}".format(spgraph_url, drive_id, file_id)
     
-    response = ""
-
-    return response
-
+    return requests.delete(url, headers=header)
 
 
 def check_token_valid(token):
