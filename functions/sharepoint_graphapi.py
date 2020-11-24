@@ -7,9 +7,13 @@ import json
 spgraph_url = os.getenv("SPGRAPH_URL") 
 spgraph_spurl = os.getenv("SPGRAPH_SPURL")
 
-@app.get("/spgraph/rename/")
+@app.get("/spgraph/rename")
 async def spgraph_rename(token: str = "", spsite: str = "", path: str = "", 
                             filename: str = "", tofilename: str = ""):
+    # Usage instructions should display if hitting /rename with no params or if any param is missing
+    if token == "" or spsite == "" or path == "" or filename == "" or tofilename == "":
+        return "{'error':'Incorrect URL format','usage':'/spgraph/rename/?token=****&spsite=/site/name&path=/path/to/file&filename=filetorename.file&tofilename=newfilename.file'}"
+    
     if not check_token_valid(token):
         raise HTTPException(status_code=403, detail="Invalid token provided")
 
@@ -18,15 +22,7 @@ async def spgraph_rename(token: str = "", spsite: str = "", path: str = "",
     spsite = check_path(spsite)
     path = check_path(path)
 
-    # Get the drive ID
-    url = "{}/sites{}{}:/drive".format(spgraph_url, spgraph_spurl, spsite)
-
-    drive_id = requests.get(url, headers=header).json()['id']
-
-    # Get a listing of the drive at the passed in path
-    url = "{}/drives/{}/root:{}:/children".format(spgraph_url, drive_id, path)
-
-    dirlist = requests.get(url, headers=header).json()
+    dirlist = get_path_children(header, spsite, path)
 
     # Iterate over the files and find the one we want
     file_id = ""
@@ -47,19 +43,25 @@ async def spgraph_rename(token: str = "", spsite: str = "", path: str = "",
 
     return requests.patch(url, data=rename, headers=header).json()
 
-@app.get("/spgraph/get/")
-async def spgraph_get(token: str = "", path: str = ""):
+@app.get("/spgraph/get")
+async def spgraph_get(token: str = "", spsite: str ="", path: str = ""):
+    # Usage instructions should display if hitting /get with no params or if any param is missing
+    if token == "" or spsite == "" or path == "":
+        return "{'error':'Incorrect URL format','usage':'/spgraph/get/?token=****&spsite=/site/name&path=/path/to/file'}"
+
     if not check_token_valid(token):
         raise HTTPException(status_code=403, detail="Invalid token provided")
 
     header, expires_in = get_msgraph_token()
 
-    url = spgraph_url + path
-
-    return requests.get(url, headers=header).json()
+    return get_path_children(header, spsite, path)
 
 @app.get("/spgraph/delete")
 async def spgraph_delete(token: str = "", spsite: str = "", path: str = "", filename: str = ""):
+    # Usage instructions should display if hitting /delete with no params or if any param is missing
+    if token == "" or spsite == "" or path == "" or filename == "":
+        return "{'error':'Incorrect URL format','usage':'/spgraph/delete/?token=****&spsite=/site/name&path=/path/to/file&filename=filetodelete.file'}"
+    
     if not check_token_valid(token):
         raise HTTPException(status_code=403, detail="Invalid token provided")
     
@@ -67,16 +69,8 @@ async def spgraph_delete(token: str = "", spsite: str = "", path: str = "", file
 
     spsite = check_path(spsite)
     path = check_path(path)
-
-    # Get the drive ID
-    url = "{}/sites{}{}:/drive".format(spgraph_url, spgraph_spurl, spsite)
-
-    drive_id = requests.get(url, headers=header).json()['id']
-
-    # Get a listing of the drive at the passed in path
-    url = "{}/drives/{}/root:{}:/children".format(spgraph_url, drive_id, path)
-
-    dirlist = requests.get(url, headers=header).json()
+    
+    dirlist = get_path_children(header, spsite, path)
 
     # Iterate over the files and find the one we want
     file_id = ""
@@ -127,3 +121,14 @@ def check_path(path):
     print(path)
 
     return path
+
+def get_path_children(header, spsite, path):
+    # Get the drive ID
+    url = "{}/sites{}{}:/drive".format(spgraph_url, spgraph_spurl, spsite)
+
+    drive_id = requests.get(url, headers=header).json()['id']
+
+    # Get a listing of the drive at the passed in path
+    url = "{}/drives/{}/root:{}:/children".format(spgraph_url, drive_id, path)
+
+    return requests.get(url, headers=header).json()
