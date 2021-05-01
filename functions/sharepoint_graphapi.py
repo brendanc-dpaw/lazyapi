@@ -1,26 +1,38 @@
 from lazyapi import app
 from fastapi import HTTPException
+from pydantic import BaseModel
 import requests
 import os
 import json
 
+class Batch(BaseModel):
+    token: str
+    path: str
+    filename: str
+    tofilename: Optional[str] = None
+
+class BatchList(BaseModel):
+    batch: List[Batch]
+
+
 spgraph_url = os.getenv("SPGRAPH_URL") 
 spgraph_spurl = os.getenv("SPGRAPH_SPURL")
+token_map = {}
 
 @app.get("/spgraph/rename")
-async def spgraph_rename(token: str = "", spsite: str = "", path: str = "", 
-                            filename: str = "", tofilename: str = ""):
-    # Usage instructions should display if hitting /rename with no params or if any param is missing
-    if token == "" or spsite == "" or path == "" or filename == "" or tofilename == "":
-        return "{'error':'Incorrect URL format','usage':'/spgraph/rename/?token=****&spsite=/site/name&path=/path/to/file&filename=filetorename.file&tofilename=newfilename.file'}"
-    
+async def spgraph_rename(token: str = "", path: str = "", filename: str = "", tofilename: str = ""):
+    # Check the token is valid and allowed to access the supplied SP site
     if not check_token_valid(token):
-        raise HTTPException(status_code=403, detail="Invalid token provided")
+        raise HTTPException(status_code=401)
+
+    # Usage instructions should display if hitting /rename with no params or if any param is missing
+    if token == "" or os.getenv("SP_CFG_{}".format(token)) is None or path == "" or filename == "" or tofilename == "":
+        return "{'error':'Incorrect URL format','usage':'/spgraph/get/?token=****&path=/path/to/file&filename=myfile&tofilename=newfilename'}"
+
+    # Simple check to make sure paths have correct leading and trailing /
+    path = check_path(path)
 
     header, expires_in = get_msgraph_token()
-
-    spsite = check_path(spsite)
-    path = check_path(path)
 
     dirlist = get_path_children(header, spsite, path)
 
@@ -44,32 +56,37 @@ async def spgraph_rename(token: str = "", spsite: str = "", path: str = "",
     return requests.patch(url, data=rename, headers=header).json()
 
 @app.get("/spgraph/get")
-async def spgraph_get(token: str = "", spsite: str ="", path: str = ""):
-    # Usage instructions should display if hitting /get with no params or if any param is missing
-    if token == "" or spsite == "" or path == "":
-        return "{'error':'Incorrect URL format','usage':'/spgraph/get/?token=****&spsite=/site/name&path=/path/to/file'}"
-
+async def spgraph_get(token: str = "", path: str = ""):
+    # Check the token is valid and allowed to access the supplied SP site
     if not check_token_valid(token):
-        raise HTTPException(status_code=403, detail="Invalid token provided")
+        raise HTTPException(status_code=401)
+
+    # Usage instructions should display if hitting /get with no params or if any param is missing
+    if token == "" or path == "":
+        return "{'error':'Incorrect URL format','usage':'/spgraph/get/?token=****&path=/path/to/file'}"
+
+    # Simple check to make sure paths have correct leading and trailing /
+    path = check_path(path)
 
     header, expires_in = get_msgraph_token()
 
     return get_path_children(header, spsite, path)
 
 @app.get("/spgraph/delete")
-async def spgraph_delete(token: str = "", spsite: str = "", path: str = "", filename: str = ""):
-    # Usage instructions should display if hitting /delete with no params or if any param is missing
-    if token == "" or spsite == "" or path == "" or filename == "":
-        return "{'error':'Incorrect URL format','usage':'/spgraph/delete/?token=****&spsite=/site/name&path=/path/to/file&filename=filetodelete.file'}"
-    
+async def spgraph_delete(token: str = "", path: str = "", filename: str = ""):
+    # Check the token is valid and allowed to access the supplied SP site
     if not check_token_valid(token):
-        raise HTTPException(status_code=403, detail="Invalid token provided")
+        raise HTTPException(status_code=401)
     
+    # Usage instructions should display if hitting /rename with no params or if any param is missing
+    if token == "" or path == "" or filename == "":
+        return "{'error':'Incorrect URL format','usage':'/spgraph/rename/?token=****&path=/path/to/file&filename=filetodelete'}"
+    
+    # Simple check to make sure paths have correct leading and trailing /
+    path = check_path(path)
+   
     header, expires_in = get_msgraph_token()
 
-    spsite = check_path(spsite)
-    path = check_path(path)
-    
     dirlist = get_path_children(header, spsite, path)
 
     # Iterate over the files and find the one we want
@@ -86,11 +103,28 @@ async def spgraph_delete(token: str = "", spsite: str = "", path: str = "", file
     
     return requests.delete(url, headers=header).json()
 
+@app.post("/spgraph/batch")
+async def spgraph_batch(token: str = "", batch: BatchList):
+    # Check the token is valid and allowed to access the supplied SP site
+    if not check_token_valid(token):
+        raise HTTPException(status_code=401)
 
-def check_token_valid(token):
-    print("value: {}  -  {}".format(token, os.getenv("SPGRAPH_VALIDATION_TOKEN")))
 
-    if os.getenv("SPGRAPH_VALIDATION_TOKEN") != token:
+
+    return "Success"
+
+def check_token_valid(request_token):
+    # Only load tokens if the token_map is empty
+    if not token_map:
+        all_tokens = os.getenv("SPGRAPH_VALIDATION_TOKENS")
+        tokens = all_tokens.split(";")
+
+        # For each token the should be a corresponding env var that 
+        # contains a Sharepoint Site name that it is valid for use with.
+        for token in tokens:
+            token_map[token] = os.getenv("SPGRAPH_{}".format(token))
+        
+    if request_token not in token_map.keys():
         return False
 
     return True
@@ -117,8 +151,6 @@ def check_path(path):
     # Ensure there is no trailing /
     if path[-1] == '/':
         path = ''.join([path[i] for i in range(len(path)-1)])
-
-    print(path)
 
     return path
 
